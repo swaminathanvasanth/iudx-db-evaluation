@@ -33,15 +33,17 @@ public class MongoDBVerticle extends AbstractVerticle {
 	}
 
 	private void search(Message<Object> message){
+		//MongoFind Query
+		
 		JsonObject query;
 		FindOptions findOptions=new FindOptions();
 		//sorted response; 
 		//limit ranges in order of [10, 100, 1000, 10000]
 		findOptions.setSort(new JsonObject().put("__time",-1));
-		findOptions.setLimit(10);
+		findOptions.setLimit(1000);
 		findOptions.setFields(new JsonObject().put("_id",0));
 		//paste the queries from the Google docs
-		//Make sure the quotes in the json file are properly formatted using backslash
+		//Make sure the quotes in the json file are properly formatted using backslashes
 		String queryString="{}";
 		try{
 			query=new JsonObject(queryString);
@@ -64,5 +66,34 @@ public class MongoDBVerticle extends AbstractVerticle {
 			e.printStackTrace();
 			message.fail(0,"failed");
 		}
+		
+		//MongoAggregation Query
+		
+		//String pipelineString="[]";
+		//try{
+		//	JsonArray pipeline=new JsonArray(pipelineString);
+		//	JsonObject command=new JsonObject().put("aggregate","archive").put("pipeline",pipeline)
+		//				.put("cursor",new JsonObject().put("batchSize",100));
+		//	start=System.currentTimeMillis();
+		//	client.runCommand("aggregate",command, res->{
+		//		if(res.succeeded()){
+		//			end=System.currentTimeMillis();
+		//			JsonArray result = res.result().getJsonObject("cursor").getJsonArray("firstBatch");
+		//			JsonArray response=new JsonArray();
+		//			for (Object o : result) {
+		//					JsonObject j = (JsonObject) o;
+		//					response.add(j);
+		//			}
+		//			logger.info("Query succeeded with "+ response.size()+ " returned documents in "+(end-start)+" mills.");
+		//			message.reply(response);
+		//		} else{
+		//			res.cause().printStackTrace();
+		//			message.fail(0,"failed");
+		//		}
+		//	});
+		//} catch(Exception e){
+		//	e.printStackTrace();
+		//	message.fail(0,"failed");
+		//}
 	}
 }
