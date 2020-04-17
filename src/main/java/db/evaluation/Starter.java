@@ -25,9 +25,9 @@ public class Starter extends AbstractVerticle {
 				res -> {
 					if (res.succeeded()) {
 						logger.info("Deployed APIServer Verticle");
-						vertx.deployVerticle(MongoDBVerticle.class.getName(), dbresponse -> {
+						vertx.deployVerticle(ElasticSearchVerticle.class.getName(), dbresponse -> {
 							if (dbresponse.succeeded()) {
-								logger.info("Deployed MongoDB Verticle");
+								logger.info("Deployed ElasticSearch Verticle");
 								future.complete();
 							} else {
 								logger.fatal("Failed to deploy verticle " + dbresponse.cause());

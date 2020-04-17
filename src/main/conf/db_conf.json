@@ -1,0 +1,4 @@
+{
+	"db_name":"varanasi-rs",
+	"connection_string":"mongodb://root:admin@localhost:27017/?authSource=admin"
+}
