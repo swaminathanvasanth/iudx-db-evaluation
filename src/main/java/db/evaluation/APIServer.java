@@ -118,6 +118,12 @@ public class APIServer extends AbstractVerticle {
 
   private void searchTimeScale(RoutingContext routingContext) {
     logger.info(" ---- API to Time Scale Client HIT ---- ");
+    HttpServerResponse response = routingContext.response();
+    JsonObject requested_data;
+    DeliveryOptions options = new DeliveryOptions();
+    requested_data = routingContext.getBodyAsJson();
+    options.addHeader("options", "options");
+    publishEvent("timescale", requested_data, options, response);
   }
 
   private void publishEvent(
