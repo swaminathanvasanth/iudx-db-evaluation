@@ -19,44 +19,48 @@ public class MongoDBVerticle extends AbstractVerticle {
 	public void start() throws Exception {
 		logger.info("MongoDB Search Verticle started!");
 		
-		JsonObject config=new JsonObject();
+		JsonObject config=new JsonObject().put("username","user").put("password","12345678")
+					.put("authSource","as").put("host","localhost")
+					.put("port",54321).put("db_name","db");
 		client = MongoClient.createShared(vertx, config);
 
 		vertx.eventBus().consumer("mongodb", message -> {
 			String options = message.headers().get("options");
-			if (options.equalsIgnoreCase("mongo")) {
-				search(message);
-			} else
+			if (options.equalsIgnoreCase("find")) {
+				searchFind(message);
+			}else if(options.equalsIgnoreCase("aggregate")){
+				searchAggregate(message);
+			} 
+			else
 				message.reply("Invalid Command");
-
 		});
 	}
 
-	private void search(Message<Object> message){
+	private void searchFind(Message<Object> message){
 		//MongoFind Query
 		
 		JsonObject query;
+		int limit=10;
 		FindOptions findOptions=new FindOptions();
 		//sorted response; 
-		//limit ranges in order of [10, 100, 1000, 10000]
 		findOptions.setSort(new JsonObject().put("__time",-1));
-		findOptions.setLimit(1000);
 		findOptions.setFields(new JsonObject().put("_id",0));
-		//paste the queries from the Google docs
-		//Make sure the quotes in the json file are properly formatted using backslashes
-		String queryString="{}";
 		try{
+			JsonObject request=(JsonObject)message.body();
+			limit=request.getInteger("limit");
+			findOptions.setLimit(limit);
+			String queryString=request.getString("query");
 			query=new JsonObject(queryString);
 			logger.info("QUERY: "+query.toString());
 			start=System.currentTimeMillis();
 			client.findWithOptions(COLLECTION,query,findOptions,response->{
 			if(response.succeeded()){
 				end=System.currentTimeMillis();
-				JsonArray res=new JsonArray();
-				for(JsonObject doc: response.result())
-					res.add(doc);
-				logger.info("Query succeeded with "+ res.size()+ " returned documents in "+(end-start)+" mills.");
-				message.reply(res);
+				//JsonArray res=new JsonArray();
+				//for(JsonObject doc: response.result())
+				//	res.add(doc);
+				logger.info("Query succeeded with "+response.result().size()+" in "+(end-start)+" mills.");
+				message.reply(response.result().toString());
 			} else{
 				response.cause().printStackTrace();
 				message.fail(0,"failed");
@@ -67,33 +71,33 @@ public class MongoDBVerticle extends AbstractVerticle {
 			message.fail(0,"failed");
 		}
 		
+	}
+
+	private void searchAggregate(Message<Object> message){
+	
 		//MongoAggregation Query
 		
-		//String pipelineString="[]";
-		//try{
-		//	JsonArray pipeline=new JsonArray(pipelineString);
-		//	JsonObject command=new JsonObject().put("aggregate","archive").put("pipeline",pipeline)
-		//				.put("cursor",new JsonObject().put("batchSize",100));
-		//	start=System.currentTimeMillis();
-		//	client.runCommand("aggregate",command, res->{
-		//		if(res.succeeded()){
-		//			end=System.currentTimeMillis();
-		//			JsonArray result = res.result().getJsonObject("cursor").getJsonArray("firstBatch");
-		//			JsonArray response=new JsonArray();
-		//			for (Object o : result) {
-		//					JsonObject j = (JsonObject) o;
-		//					response.add(j);
-		//			}
-		//			logger.info("Query succeeded with "+ response.size()+ " returned documents in "+(end-start)+" mills.");
-		//			message.reply(response);
-		//		} else{
-		//			res.cause().printStackTrace();
-		//			message.fail(0,"failed");
-		//		}
-		//	});
-		//} catch(Exception e){
-		//	e.printStackTrace();
-		//	message.fail(0,"failed");
-		//}
+		String pipelineString;
+		try{
+			JsonObject request=(JsonObject)message.body();
+			pipelineString=request.getString("query");
+			JsonArray pipeline=new JsonArray(pipelineString);
+			JsonObject command=new JsonObject().put("aggregate","archive").put("pipeline",pipeline)
+						.put("cursor",new JsonObject().put("batchSize",10000));
+			start=System.currentTimeMillis();
+			client.runCommand("aggregate",command, res->{
+				if(res.succeeded()){
+					end=System.currentTimeMillis();
+					logger.info("Query succeeded with "+res.result().getJsonObject("cursor").getJsonArray("firstBatch").size()+ " returned documents in "+(end-start)+" mills.");
+					message.reply(res.result().getJsonObject("cursor").getJsonArray("firstBatch").toString());
+				} else{
+					res.cause().printStackTrace();
+					message.fail(0,"failed");
+				}
+			});
+		} catch(Exception e){
+			e.printStackTrace();
+			message.fail(0,"failed");
+		}
 	}
 }
